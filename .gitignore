@@ -1,3 +1,4 @@
 *.pb.go
 .vscode
 .env
+.DS_Store
