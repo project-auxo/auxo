@@ -1,0 +1,6 @@
+# sample_apollo_config.yml
+
+agent:
+  name: "agent1"
+  olympus: "localhost"
+  port: 5555

@@ -1,0 +1,9 @@
+# sample_broker_config.yml
+
+broker:
+  hostname: "localhost"
+  port: 5555
+  # Olympus frontend server
+  frontend_server:
+    hostname: "localhost"
+    port: 5556

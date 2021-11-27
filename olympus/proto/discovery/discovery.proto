@@ -1,0 +1,74 @@
+syntax = "proto3";
+package discovery;
+
+option go_package = "github.com/project-auxo/auxo/olympus/proto/discovery";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+message Entity {
+  enum Type {
+    UNSPECIFIED = 0;
+  
+    BROKER = 1;
+  
+    AGENT = 2;
+  }
+
+  Type type = 1;
+}
+
+// Header is the identification of the producer of the message and the type of
+// message.
+enum Header {
+  HEADER_UNSPECIFIED = 0;
+
+  HEADER_READY = 1;
+
+  HEADER_REQUEST = 2;
+
+  HEADER_REPLY = 3;
+
+  HEADER_HEARTBEAT = 4;
+
+  HEADER_DISCONNECT = 5;
+}
+
+message Ready {}
+
+message Request {
+  // Required.
+  google.protobuf.Any payload = 1;
+}
+
+message Reply {
+  // Required.
+  google.protobuf.Any payload = 1;
+}
+
+message Heartbeat {}
+
+message Disconnect {
+  google.protobuf.Timestamp expiration_time = 1;
+}
+
+message DiscoveryMessage {
+  // Required.
+  Header header = 1;
+
+  // Required.
+  Entity origin = 2;
+
+  // Required.
+  oneof command {
+    Ready ready = 3;
+
+    Request request = 4;
+
+    Reply reply = 5;
+
+    Heartbeat heartbeat = 6;
+
+    Disconnect disconnect = 7;
+  }
+}
