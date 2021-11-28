@@ -12,11 +12,13 @@ require (
 
 require (
 	github.com/coreos/go-oidc/v3 v3.1.0
+	github.com/faiface/pixel v0.10.0
 	github.com/gin-contrib/sessions v0.0.4
 	github.com/gin-gonic/gin v1.7.4
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/joho/godotenv v1.4.0
 	github.com/sirupsen/logrus v1.8.1
+	golang.org/x/image v0.0.0-20190523035834-f03afa92d3ff
 	golang.org/x/net v0.0.0-20211118161319-6a13c67c3ce4 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sys v0.0.0-20211117180635-dee7805ff2e1 // indirect
