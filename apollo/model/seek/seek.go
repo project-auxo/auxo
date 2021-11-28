@@ -2,24 +2,35 @@ package seek
 
 import (
 	"image/color"
+	"strconv"
 	"time"
 
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/imdraw"
 	"github.com/faiface/pixel/pixelgl"
+	zmq "github.com/pebbe/zmq4"
 	"golang.org/x/image/colornames"
 
 	"github.com/project-auxo/auxo/olympus/logging"
 )
 
+type Command int
+
 const (
-	thickness     = 3
-	cartWidth     = 150
-	cartHeight    = 20
-	radius        = 25
-	movementAcc   = 200
-	frictionCoeff = 0.99
-	cartM         = 5 // Kg
+	Left Command = iota
+	Right
+)
+
+const (
+	inproc          = "inproc://seekcommands"
+	consumeCommands = "commands"
+	thickness       = 3
+	cartWidth       = 150
+	cartHeight      = 20
+	radius          = 25
+	movementAcc     = 200
+	frictionCoeff   = 0.99
+	cartM           = 5 // Kg
 )
 
 var (
@@ -79,7 +90,7 @@ func (s *SeekSim) draw(win *pixelgl.Window) {
 	imd.Draw(win)
 }
 
-func (s *SeekSim) update(win *pixelgl.Window, dt float64) {
+func (s *SeekSim) update(win *pixelgl.Window, dt float64, sub *zmq.Socket) {
 	if !s.cart.IntersectCircle(s.goal).Eq(pixel.ZV) {
 		// Intersection!
 		useOtherTargetPos = !useOtherTargetPos
@@ -90,15 +101,19 @@ func (s *SeekSim) update(win *pixelgl.Window, dt float64) {
 		}
 	}
 
-	if win.Pressed(pixelgl.KeyA) || win.Pressed(pixelgl.KeyD) {
+	msg, _ := sub.RecvMessage(zmq.DONTWAIT)
+	if len(msg) > 0 {
+		recvCommand, _ := strconv.Atoi(msg[1])
+		command := Command(recvCommand)
+
 		appliedForceVec := pixel.V(cartM*movementAcc, 0)
-		if win.Pressed(pixelgl.KeyA) {
-			// Move cart left
+		if command == Left {
 			appliedForceVec = appliedForceVec.Scaled(-1)
 		}
 		accVec := appliedForceVec.Scaled(1.0 / cartM)
 		s.state.cartVel = s.state.cartVel.Add(accVec.Scaled(dt))
 	}
+
 	// Friction
 	s.state.cartVel = s.state.cartVel.Scaled(frictionCoeff)
 
@@ -114,14 +129,24 @@ func Run() {
 	cfg := pixelgl.WindowConfig{
 		Title:  "Seek Game",
 		Bounds: bounds,
-		VSync:  true,
+		VSync:  false,
 	}
 	win, err := pixelgl.NewWindow(cfg)
 	if err != nil {
 		log.Fatalf("failed to make simulation window: %v", err)
 	}
 
+	publisher, _ := zmq.NewSocket(zmq.PUB)
+	defer publisher.Close()
+	publisher.Bind(inproc)
+
+	subscriber, _ := zmq.NewSocket(zmq.SUB)
+	defer subscriber.Close()
+	subscriber.Connect(inproc)
+	subscriber.SetSubscribe(consumeCommands)
+
 	last := time.Now()
+	fps := time.NewTicker(time.Second / 120)
 	for !win.Closed() {
 		if win.JustPressed(pixelgl.KeyEscape) || win.JustPressed(pixelgl.KeyQ) {
 			win.SetClosed(true)
@@ -129,10 +154,21 @@ func Run() {
 		}
 		dt := time.Since(last).Seconds()
 		last = time.Now()
-		cart.update(win, dt)
+
+		// Send commands via ZeroMQ
+		if win.Pressed(pixelgl.KeyA) {
+			publisher.SendMessage(consumeCommands, Left)
+		}
+		if win.Pressed(pixelgl.KeyD) {
+			publisher.SendMessage(consumeCommands, Right)
+		}
+
+		cart.update(win, dt, subscriber)
 
 		win.Clear(colornames.Black)
 		cart.draw(win)
 		win.Update()
+
+		<-fps.C
 	}
 }
