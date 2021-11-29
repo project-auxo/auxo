@@ -1,0 +1,35 @@
+syntax = "proto3";
+package seek;
+
+option go_package = "github.com/project-auxo/auxo/apollo/model/seek/proto/seekpb";
+
+enum Direction {
+  UNSPECIFIED = 0;
+
+  LEFT = 1;
+
+  RIGHT = 2;
+}
+
+message Command {
+  Direction direction = 1;
+}
+
+message Vec {
+  double x = 1;
+
+  double y = 2;
+}
+
+message Cart {
+  // The left bound and right bound of the cart.
+  Vec cart_pos = 1;
+
+  Vec cart_vel = 2;
+}
+
+message SimState {
+  Cart cart = 1;
+
+  Vec goal_pos = 2;
+}

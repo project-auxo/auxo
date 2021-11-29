@@ -5,10 +5,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	zmq "github.com/pebbe/zmq4"
+	"google.golang.org/protobuf/proto"
 
 	agentCfg "github.com/project-auxo/auxo/apollo/internal/config"
+	"github.com/project-auxo/auxo/apollo/model/seek"
+	seekpb "github.com/project-auxo/auxo/apollo/model/seek/proto"
 	"github.com/project-auxo/auxo/olympus/logging"
 	discpb "github.com/project-auxo/auxo/olympus/proto/discovery"
 )
@@ -46,7 +50,57 @@ func (agent *Agent) Run() (err error) {
 
 	agent.log.Infof("%s is running...", agent.name)
 	go agent.actor.run()
+	// Testing, not to be shipped to production
+	go agent.playSeekGame()
 	interrupt := <-runChan
 	agent.log.Infof("Agent is shutting down due to %+v\n", interrupt)
 	return
+}
+
+// Testing, not to be shipped to production
+func (agent *Agent) playSeekGame() {
+	hostname := seek.Hostname
+	if hostname == "*" {
+		hostname = "localhost"
+	}
+
+	stateSubscriberSocket, err := zmq.NewSocket(zmq.SUB)
+	if err != nil {
+		agent.log.Fatalln("state receiver broken")
+	}
+	defer stateSubscriberSocket.Close()
+	stateSubscriberSocket.SetSubscribe(seek.StateTopic)
+	stateSubscriberSocket.Connect(fmt.Sprintf("tcp://%s:%d", hostname, seek.Port))
+
+	commandSocket, err := zmq.NewSocket(zmq.REQ)
+	if err != nil {
+		agent.log.Fatalln("command issuer broken")
+	}
+	defer commandSocket.Close()
+	commandSocket.Connect(fmt.Sprintf("tcp://%s:%d", hostname, seek.CommandPort))
+	command := &seekpb.Command{}
+
+	fps := time.NewTicker(seek.PublishRate)
+	for {
+		stateMsg, _ := stateSubscriberSocket.RecvBytes(zmq.DONTWAIT)
+		if len(stateMsg) > 0 {
+			// Received the sim state
+			state := &seekpb.SimState{}
+			if err := proto.Unmarshal(stateMsg, state); err != nil {
+				continue
+			}
+
+			// Send command based on information from the sim state
+			if state.GoalPos.X < state.Cart.CartPos.X {
+				command.Direction = seekpb.Direction_LEFT
+			} else {
+				command.Direction = seekpb.Direction_RIGHT
+			}
+			commandBytes, _ := proto.Marshal(command)
+			commandSocket.SendBytes(commandBytes, zmq.DONTWAIT)
+			// Just empty receive, don't care about game server's reply
+			commandSocket.Recv(zmq.DONTWAIT)
+		}
+		<-fps.C
+	}
 }

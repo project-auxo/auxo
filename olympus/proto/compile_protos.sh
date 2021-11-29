@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 
-# Get current directory.
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+if [ $# -eq 0 ]
+  then
+    # Get current directory.
+  DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+else
+  # Proto directiory passed as arg to script.
+  DIR=$1
+fi
 
 # Find all directories containing at least one prototfile.
 # Based on: https://buf.build/docs/migration-prototool#prototool-generate.

@@ -1,8 +1,8 @@
 package seek
 
 import (
+	"fmt"
 	"image/color"
-	"strconv"
 	"time"
 
 	"github.com/faiface/pixel"
@@ -10,27 +10,25 @@ import (
 	"github.com/faiface/pixel/pixelgl"
 	zmq "github.com/pebbe/zmq4"
 	"golang.org/x/image/colornames"
+	"google.golang.org/protobuf/proto"
 
+	pb "github.com/project-auxo/auxo/apollo/model/seek/proto"
 	"github.com/project-auxo/auxo/olympus/logging"
 )
 
-type Command int
-
 const (
-	Left Command = iota
-	Right
-)
-
-const (
-	inproc          = "inproc://seekcommands"
-	consumeCommands = "commands"
-	thickness       = 3
-	cartWidth       = 150
-	cartHeight      = 20
-	radius          = 25
-	movementAcc     = 200
-	frictionCoeff   = 0.99
-	cartM           = 5 // Kg
+	Hostname      = "*"
+	Port          = 5559
+	CommandPort   = 5560
+	PublishRate   = time.Second / 120
+	StateTopic    = "seek/state"
+	thickness     = 3
+	cartWidth     = 150
+	cartHeight    = 20
+	radius        = 25
+	movementAcc   = 300
+	frictionCoeff = 0.99
+	cartM         = 5 // Kg
 )
 
 var (
@@ -39,47 +37,45 @@ var (
 	initialTargetPos  = pixel.V(900, initialCartPos.Y)
 	otherTargetPos    = pixel.V(200, initialCartPos.Y)
 	useOtherTargetPos = false
-	cart              = new()
+	sim               = new()
 	log               = logging.Base()
 )
 
-type StateVec struct {
-	cartPos pixel.Vec // Center of the cart
-	cartVel pixel.Vec // Velocity of the cart
+type Cart struct {
+	cart    pixel.Rect
+	cartVel pixel.Vec
 }
 
 type SeekSim struct {
-	cart  pixel.Rect
-	goal  pixel.Circle
-	state StateVec
+	cart Cart
+	goal pixel.Circle
 }
 
 func new() *SeekSim {
-	cart := pixel.Rect{
-		Min: pixel.V(initialCartPos.X-cartWidth, initialCartPos.Y-cartHeight),
-		Max: pixel.V(initialCartPos.X+cartWidth, initialCartPos.Y),
+	cart := Cart{
+		cart: pixel.Rect{
+			Min: pixel.V(initialCartPos.X-cartWidth, initialCartPos.Y-cartHeight),
+			Max: pixel.V(initialCartPos.X+cartWidth, initialCartPos.Y),
+		},
+		cartVel: pixel.ZV,
 	}
 	goal := pixel.Circle{
 		Center: initialTargetPos,
 		Radius: radius,
 	}
-	state := StateVec{
-		cartPos: initialCartPos,
-		cartVel: pixel.ZV,
-	}
 	return &SeekSim{
-		cart:  cart,
-		state: state,
-		goal:  goal,
+		cart: cart,
+		goal: goal,
 	}
 }
 
 func (s *SeekSim) draw(win *pixelgl.Window) {
 	imd := imdraw.New(nil)
+	cart := s.cart.cart
 
 	// Drawing the cart
 	imd.Color = color.White
-	imd.Push(s.cart.Min, s.cart.Max)
+	imd.Push(cart.Min, cart.Max)
 	imd.Rectangle(thickness)
 
 	// Drawing the target to seek
@@ -90,8 +86,8 @@ func (s *SeekSim) draw(win *pixelgl.Window) {
 	imd.Draw(win)
 }
 
-func (s *SeekSim) update(win *pixelgl.Window, dt float64, sub *zmq.Socket) {
-	if !s.cart.IntersectCircle(s.goal).Eq(pixel.ZV) {
+func (s *SeekSim) update(win *pixelgl.Window, dt float64, sock *zmq.Socket) {
+	if !s.cart.cart.IntersectCircle(s.goal).Eq(pixel.ZV) {
 		// Intersection!
 		useOtherTargetPos = !useOtherTargetPos
 		if useOtherTargetPos {
@@ -101,27 +97,55 @@ func (s *SeekSim) update(win *pixelgl.Window, dt float64, sub *zmq.Socket) {
 		}
 	}
 
-	msg, _ := sub.RecvMessage(zmq.DONTWAIT)
+	msg, _ := sock.RecvBytes(zmq.DONTWAIT)
 	if len(msg) > 0 {
-		recvCommand, _ := strconv.Atoi(msg[1])
-		command := Command(recvCommand)
+		command := &pb.Command{}
+		if err := proto.Unmarshal(msg, command); err != nil {
+			return
+		}
+		// Just send an OK bit...
+		sock.SendBytes([]byte{1}, zmq.DONTWAIT)
 
 		appliedForceVec := pixel.V(cartM*movementAcc, 0)
-		if command == Left {
+		if command.GetDirection() == pb.Direction_LEFT {
 			appliedForceVec = appliedForceVec.Scaled(-1)
 		}
 		accVec := appliedForceVec.Scaled(1.0 / cartM)
-		s.state.cartVel = s.state.cartVel.Add(accVec.Scaled(dt))
+		s.cart.cartVel = s.cart.cartVel.Add(accVec.Scaled(dt))
+	}
+	s.cart.cartVel = s.cart.cartVel.Scaled(frictionCoeff)
+
+	newMin := s.cart.cart.Min.Add(s.cart.cartVel.Scaled(dt))
+	newMax := s.cart.cart.Max.Add(s.cart.cartVel.Scaled(dt))
+	if bounds.Contains(newMin) && bounds.Contains(newMax) {
+		s.cart.cart.Min = newMin
+		s.cart.cart.Max = newMax
+	}
+}
+
+func (s *SeekSim) shareState() {
+	publisher, err := zmq.NewSocket(zmq.PUB)
+	if err != nil {
+		log.Fatalln("failed to make publisher in order to share state.")
 	}
 
-	// Friction
-	s.state.cartVel = s.state.cartVel.Scaled(frictionCoeff)
+	defer publisher.Close()
+	publisher.Bind(fmt.Sprintf("tcp://%s:%d", Hostname, Port))
 
-	newMin := s.cart.Min.Add(s.state.cartVel.Scaled(dt))
-	newMax := s.cart.Max.Add(s.state.cartVel.Scaled(dt))
-	if bounds.Contains(newMin) && bounds.Contains(newMax) {
-		s.cart.Min = newMin
-		s.cart.Max = newMax
+	stateMsg := &pb.SimState{}
+	rate := time.NewTicker(PublishRate)
+	for {
+		stateMsg.Cart = &pb.Cart{
+			CartPos: &pb.Vec{X: s.cart.cart.Min.X, Y: s.cart.cart.Max.X},
+			CartVel: &pb.Vec{X: s.cart.cartVel.X, Y: s.cart.cartVel.Y},
+		}
+		stateMsg.GoalPos = &pb.Vec{X: s.goal.Center.X, Y: 0}
+		stateBytes, err := proto.Marshal(stateMsg)
+		if err != nil {
+			continue
+		}
+		publisher.SendMessageDontwait(StateTopic, stateBytes)
+		<-rate.C
 	}
 }
 
@@ -136,14 +160,12 @@ func Run() {
 		log.Fatalf("failed to make simulation window: %v", err)
 	}
 
-	publisher, _ := zmq.NewSocket(zmq.PUB)
-	defer publisher.Close()
-	publisher.Bind(inproc)
+	// Share the sim's state to any subscriber wanting to listen
+	go sim.shareState()
 
-	subscriber, _ := zmq.NewSocket(zmq.SUB)
-	defer subscriber.Close()
-	subscriber.Connect(inproc)
-	subscriber.SetSubscribe(consumeCommands)
+	commandSocket, _ := zmq.NewSocket(zmq.REP)
+	defer commandSocket.Close()
+	commandSocket.Bind(fmt.Sprintf("tcp://%s:%d", Hostname, CommandPort))
 
 	last := time.Now()
 	fps := time.NewTicker(time.Second / 120)
@@ -155,18 +177,10 @@ func Run() {
 		dt := time.Since(last).Seconds()
 		last = time.Now()
 
-		// Send commands via ZeroMQ
-		if win.Pressed(pixelgl.KeyA) {
-			publisher.SendMessage(consumeCommands, Left)
-		}
-		if win.Pressed(pixelgl.KeyD) {
-			publisher.SendMessage(consumeCommands, Right)
-		}
-
-		cart.update(win, dt, subscriber)
+		sim.update(win, dt, commandSocket)
 
 		win.Clear(colornames.Black)
-		cart.draw(win)
+		sim.draw(win)
 		win.Update()
 
 		<-fps.C
