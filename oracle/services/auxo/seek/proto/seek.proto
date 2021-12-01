@@ -1,7 +1,7 @@
 syntax = "proto3";
 package seek;
 
-option go_package = "github.com/project-auxo/auxo/apollo/model/seek/proto/seekpb";
+option go_package = "github.com/project-auxo/auxo/oracle/services/auxo/seek/proto/seekpb";
 
 enum Direction {
   UNSPECIFIED = 0;

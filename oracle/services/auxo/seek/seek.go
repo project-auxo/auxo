@@ -12,8 +12,8 @@ import (
 	"golang.org/x/image/colornames"
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/project-auxo/auxo/apollo/model/seek/proto"
 	"github.com/project-auxo/auxo/olympus/logging"
+	pb "github.com/project-auxo/auxo/oracle/services/auxo/seek/proto"
 )
 
 const (

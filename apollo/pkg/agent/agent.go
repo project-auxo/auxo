@@ -11,10 +11,10 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	agentCfg "github.com/project-auxo/auxo/apollo/internal/config"
-	"github.com/project-auxo/auxo/apollo/model/seek"
-	seekpb "github.com/project-auxo/auxo/apollo/model/seek/proto"
 	"github.com/project-auxo/auxo/olympus/logging"
 	discpb "github.com/project-auxo/auxo/olympus/proto/discovery"
+	"github.com/project-auxo/auxo/oracle/services/auxo/seek"
+	seekpb "github.com/project-auxo/auxo/oracle/services/auxo/seek/proto"
 )
 
 const (
