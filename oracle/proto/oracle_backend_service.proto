@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+option go_package = "github.com/project-auxo/auxo/oracle/proto";
+
+package oracle;
+
+// Backend service for the Oracle
+service OracleBackendService {
+  // Checks whether a given service exists in the registry.
+  rpc CheckServiceExists(CheckServiceExistsReq) returns (CheckServiceExistsRep) {}
+}
+
+enum Status {
+  UNSPECIFIED = 0;
+
+  OK = 1;
+
+  FAIL = 2;
+}
+
+message CheckServiceExistsReq {
+  // Required.
+  string service_id = 1;
+}
+
+message CheckServiceExistsRep {
+  // Required.
+  // Whether or not the given service exists in the registry.
+  bool exists = 1;
+
+  // Optional.
+  // If the service exists and can deploy an oracle, return a status as to
+  // whether the oracle has been started.
+  Status status = 2;
+}
