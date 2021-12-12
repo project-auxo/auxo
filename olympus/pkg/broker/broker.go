@@ -17,7 +17,7 @@ import (
 	"github.com/project-auxo/auxo/olympus/logging"
 	util "github.com/project-auxo/auxo/olympus/pkg/util"
 	discpb "github.com/project-auxo/auxo/olympus/proto/discovery"
-	hestiapb "github.com/project-auxo/auxo/olympus/proto/hestia"
+	pb "github.com/project-auxo/auxo/olympus/proto/olympus"
 )
 
 const (
@@ -109,8 +109,7 @@ func (broker *Broker) runFrontendServer() {
 		broker.log.Fatalf("set up frontend server: %v", err)
 	}
 	s := grpc.NewServer()
-	hestiapb.RegisterHestiaFrontendServiceServer(
-		s, &hestiaFrontendServer{broker: broker})
+	pb.RegisterOlympusFrontendServiceServer(s, &olympusFrontendServer{broker: broker})
 
 	broker.log.Info("Broker's frontend server is running...")
 	go func() {

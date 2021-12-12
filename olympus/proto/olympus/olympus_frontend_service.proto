@@ -1,11 +1,11 @@
 syntax = "proto3";
 
-option go_package = "github.com/project-auxo/auxo/olympus/proto/hestia";
+option go_package = "github.com/project-auxo/auxo/olympus/proto/olympus";
 
-package hestia;
+package olympus;
 
-// Frontend service for Hestia
-service HestiaFrontendService {
+// Frontend service, used by e.g. Hestia clients
+service OlympusFrontendService {
   // Obtains the number of agents currently conencted to Olympus.
   rpc GetNumberOfAgents(GetNumberOfAgentsReq) returns (GetNumberOfAgentsRep) {}
 }

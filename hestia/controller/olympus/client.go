@@ -8,16 +8,16 @@ import (
 
 	hestiaCfg "github.com/project-auxo/auxo/hestia/internal/config"
 	"github.com/project-auxo/auxo/olympus/logging"
-	pb "github.com/project-auxo/auxo/olympus/proto/hestia"
+	pb "github.com/project-auxo/auxo/olympus/proto/olympus"
 )
 
 var (
 	log    = logging.Base()
 	once   sync.Once
-	client pb.HestiaFrontendServiceClient // Singleton
+	client pb.OlympusFrontendServiceClient // Singleton
 )
 
-func GetClient(cfg *hestiaCfg.Config) pb.HestiaFrontendServiceClient {
+func GetClient(cfg *hestiaCfg.Config) pb.OlympusFrontendServiceClient {
 	once.Do(func() {
 		conn, err := grpc.Dial(
 			fmt.Sprintf("%s:%d", cfg.Hestia.FrontendClient.Hostname,
@@ -25,7 +25,7 @@ func GetClient(cfg *hestiaCfg.Config) pb.HestiaFrontendServiceClient {
 		if err != nil {
 			log.Fatalf("dial: %v", err)
 		}
-		client = pb.NewHestiaFrontendServiceClient(conn)
+		client = pb.NewOlympusFrontendServiceClient(conn)
 	})
 	return client
 }

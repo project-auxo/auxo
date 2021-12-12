@@ -8,11 +8,11 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/project-auxo/auxo/olympus/logging"
-	pb "github.com/project-auxo/auxo/olympus/proto/hestia"
+	pb "github.com/project-auxo/auxo/olympus/proto/olympus"
 )
 
 // Get the number of agents that are operating on Olympus
-func GetNumberOfAgents(client pb.HestiaFrontendServiceClient) gin.HandlerFunc {
+func GetNumberOfAgents(client pb.OlympusFrontendServiceClient) gin.HandlerFunc {
 	log = logging.Base()
 	return func(gctx *gin.Context) {
 		ctx, cancel := context.WithTimeout(

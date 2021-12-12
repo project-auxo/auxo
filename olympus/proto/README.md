@@ -1,0 +1,1 @@
+In order to compile protos, run `olympus/proto/compile_protos.sh ${proto_directory}` from `auxo/` where `${proto_directory}` is relative top `auxo/`

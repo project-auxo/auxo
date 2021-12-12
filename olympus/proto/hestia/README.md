@@ -1,1 +1,0 @@
-## Services that are available to the Hestia frontend

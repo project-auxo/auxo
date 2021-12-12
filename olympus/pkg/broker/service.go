@@ -4,17 +4,17 @@ import (
 	"context"
 	"math/rand"
 
-	pb "github.com/project-auxo/auxo/olympus/proto/hestia"
+	pb "github.com/project-auxo/auxo/olympus/proto/olympus"
 )
 
-type hestiaFrontendServer struct {
-	pb.UnimplementedHestiaFrontendServiceServer
+type olympusFrontendServer struct {
+	pb.UnimplementedOlympusFrontendServiceServer
 	broker *Broker // The currently running broker
 }
 
 // GetNumberOfAgents returns the number of agents that are currently connected
 // to Olympus.
-func (s *hestiaFrontendServer) GetNumberOfAgents(
+func (s *olympusFrontendServer) GetNumberOfAgents(
 	ctx context.Context, req *pb.GetNumberOfAgentsReq) (*pb.GetNumberOfAgentsRep, error) {
 	// TODO(bellabah): Should make use of information within the broker.
 	numAgents := rand.Intn(10)
