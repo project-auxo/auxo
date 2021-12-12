@@ -8,5 +8,9 @@ type Config struct {
 			Hostname string `yaml:"hostname"`
 			Port     int    `yaml:"port"`
 		} `yaml:"frontend_server"`
+		BackendClient struct {
+			Hostname string `yaml:"hostname"`
+			Port     int    `yaml:"port"`
+		} `yaml:"backend_client"`
 	} `yaml:"broker"`
 }

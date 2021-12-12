@@ -13,11 +13,11 @@ import (
 
 var (
 	log    = logging.Base()
-	client pb.HestiaFrontendServiceClient
 	once   sync.Once
+	client pb.HestiaFrontendServiceClient // Singleton
 )
 
-func initClient(cfg *hestiaCfg.Config) {
+func GetClient(cfg *hestiaCfg.Config) pb.HestiaFrontendServiceClient {
 	once.Do(func() {
 		conn, err := grpc.Dial(
 			fmt.Sprintf("%s:%d", cfg.Hestia.FrontendClient.Hostname,
@@ -27,9 +27,5 @@ func initClient(cfg *hestiaCfg.Config) {
 		}
 		client = pb.NewHestiaFrontendServiceClient(conn)
 	})
-}
-
-func GetClient(cfg *hestiaCfg.Config) pb.HestiaFrontendServiceClient {
-	initClient(cfg)
 	return client
 }

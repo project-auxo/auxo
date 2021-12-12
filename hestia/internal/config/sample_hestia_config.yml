@@ -3,7 +3,7 @@
 hestia:
   hostname: "localhost"
   port: 8080
-  # Olympus frontend client
-  frontend_client:
+  # backend client presented to Olympus
+  backend_client:
     hostname: "localhost"
     port: 5556

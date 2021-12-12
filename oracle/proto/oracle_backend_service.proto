@@ -20,7 +20,7 @@ enum Status {
 
 message CheckServiceExistsReq {
   // Required.
-  string service_id = 1;
+  string service_name = 1;
 }
 
 message CheckServiceExistsRep {
