@@ -1,0 +1,10 @@
+# hestia/internal/config/config.yml
+
+hestia:
+  hostname: ""
+  port: 8080
+  # To communicate with the Olympus service, we make use of the client defined
+  # according to the following hostname and port.
+  backend_client:
+    hostname: "olympus-service"
+    port: 5556

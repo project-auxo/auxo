@@ -1,0 +1,6 @@
+# oracle/internal/config/config.yml
+
+oracle:
+  name: "auxo/oracle"
+  hostname: ""
+  port: 3000

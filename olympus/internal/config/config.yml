@@ -1,0 +1,14 @@
+# olympus/internal/config/config.yml
+
+broker:
+  hostname: "localhost"
+  port: 5555
+  # Olympus frontend server
+  frontend_server:
+    hostname: "localhost"
+    port: 5556
+  # To communicate with the Oracle service, we make use of the client defined
+  # according to the following hostname and port.
+  backend_client:
+    hostname: "oracle-backend-service"
+    port: 3000

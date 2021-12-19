@@ -1,4 +1,0 @@
- <services>
-   <service name="auxo.pendulum"></service>
-   <service name="auxo.seek"></service>
- </services>

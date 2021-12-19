@@ -18,14 +18,19 @@ import (
 	"github.com/project-auxo/auxo/hestia/platform/middleware"
 )
 
+const (
+	staticFilePath   = "hestia/web/static"
+	templateFilePath = "hestia/web/template/*"
+)
+
 func New(auth *authenticator.Authenticator, cfg *hestiaCfg.Config) *gin.Engine {
 	r := gin.Default()
 	gob.Register(map[string]interface{}{})
 	store := cookie.NewStore([]byte("secret"))
 	r.Use(sessions.Sessions("auth-session", store))
 
-	r.Static("public/", "Hestia/web/static")
-	r.LoadHTMLGlob("Hestia/web/template/*")
+	r.Static("public/", staticFilePath)
+	r.LoadHTMLGlob(templateFilePath)
 
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "home.html", nil)

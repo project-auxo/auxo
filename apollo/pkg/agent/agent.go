@@ -48,16 +48,18 @@ func (agent *Agent) Run() (err error) {
 	defer agent.close()
 	signal.Notify(runChan, os.Interrupt, syscall.SIGTSTP)
 
-	agent.log.Infof("%s is running...", agent.name)
+	agent.log.Infof("⇨ Auxo agent %s is running\n", agent.name)
 	go agent.actor.run()
-	// Testing, not to be shipped to production
+	// TODO(bellabah): Testing, not to be shipped to production
 	go agent.playSeekGame()
+
 	interrupt := <-runChan
-	agent.log.Infof("Agent is shutting down due to %+v\n", interrupt)
+	agent.log.Infof(
+		"Auxo agent %s is shutting down due to %+v\n", agent.name, interrupt)
 	return
 }
 
-// Testing, not to be shipped to production
+// TODO(bellabah): Testing, not to be shipped to production
 func (agent *Agent) playSeekGame() {
 	hostname := seek.Hostname
 	if hostname == "*" {

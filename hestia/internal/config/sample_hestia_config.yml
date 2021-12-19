@@ -1,9 +1,0 @@
-# sample_hestia_config.yml
-
-hestia:
-  hostname: "localhost"
-  port: 8080
-  # backend client presented to Olympus
-  backend_client:
-    hostname: "localhost"
-    port: 5556

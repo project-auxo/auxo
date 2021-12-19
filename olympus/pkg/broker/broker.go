@@ -39,7 +39,7 @@ type Broker struct {
 
 func New(cfg *brokerConfig.Config) (broker *Broker, err error) {
 	hostname := cfg.Broker.Hostname
-	if hostname == "localhost" {
+	if hostname == "localhost" || hostname == "" {
 		// Required by ZMQ
 		hostname = "*"
 	}
@@ -103,19 +103,21 @@ func (broker *Broker) runFrontendServer() {
 	var runChan = make(chan os.Signal, 1)
 	signal.Notify(runChan, os.Interrupt, syscall.SIGTSTP)
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(
-		"%s:%d", broker.frontendHostname, broker.frontendPort))
+	frontendEndpoint := fmt.Sprintf(
+		"%s:%d", broker.frontendHostname, broker.frontendPort)
+	lis, err := net.Listen("tcp", frontendEndpoint)
 	if err != nil {
-		broker.log.Fatalf("set up frontend server: %v", err)
+		broker.log.Fatalf("set up Olympus/HestiaFrontend: %v", err)
 	}
 	s := grpc.NewServer()
 	pb.RegisterOlympusFrontendServiceServer(s, &olympusFrontendServer{broker: broker})
 
-	broker.log.Info("Broker's frontend server is running...")
 	go func() {
+		broker.log.Infof(
+			"⇨ Olympus/HestiaFrontend started on %s\n", frontendEndpoint)
 		reflection.Register(s)
 		if err := s.Serve(lis); err != nil {
-			broker.log.Fatalf("failed to serve: %v", err)
+			broker.log.Fatalf("failed to serve Olympus/HestiaFrontend: %v", err)
 		}
 	}()
 
@@ -132,11 +134,11 @@ func (broker *Broker) Run() (err error) {
 	defer broker.close()
 	signal.Notify(runChan, os.Interrupt, syscall.SIGTSTP)
 
-	broker.log.Infoln("Broker is running...")
+	broker.log.Infof("⇨ Olympus/Broker started on %s\n", broker.endpoint)
 	go broker.handle()
 	broker.runFrontendServer()
 
 	interrupt := <-runChan
-	broker.log.Infof("Broker is shutting down due to %+v\n", interrupt)
+	broker.log.Infof("Olympus/Broker is shutting down due to %+v\n", interrupt)
 	return
 }

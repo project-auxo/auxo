@@ -1,5 +1,0 @@
-# oracle_config.yml
-
-oracle:
-  hostname: "localhost"
-  port: 8081

@@ -7,20 +7,21 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
+	"sync"
 
 	"github.com/project-auxo/auxo/olympus/logging"
 )
 
 const (
 	serviceManifest = "ServiceManifest.xml"
-	registryFile    = "registry.xml"
 	relServicePath  = "oracle/services"
-	relRegistryPath = "oracle/registry/registry.xml"
+	relRegistryPath = "registry.xml"
+	debug           = false
 )
 
 var log = logging.Base()
 var servicesMap = make(map[string]Manifest)
+var once sync.Once
 
 type Manifest struct {
 	XMLName     xml.Name `xml:"manifest"`
@@ -39,25 +40,12 @@ type Service struct {
 }
 
 func init() {
-	currDir, err := os.Getwd()
-	prevDir := currDir
-	if err != nil {
-		log.Fatalf("current directory broken: %v", err)
-	}
-	if strings.HasSuffix(currDir, "auxo") {
-		outputPath := currDir + "/" + relRegistryPath
-		err = os.Chdir(currDir + "/" + relServicePath)
-		if err != nil {
-			log.Fatalf("failed to change to the service directory: %v", err)
-		}
-		currDir, _ = os.Getwd()
-		update(currDir, outputPath)
-	}
-	log.Info("Successfully updated Oracle's registry.")
-	os.Chdir(prevDir)
+	once.Do(func() {
+		update(relServicePath, relRegistryPath)
+	})
 }
 
-// Updates the registry by looking through Oracle/services for any additional
+// Updates the servicesMap by looking through Oracle/services for any additional
 // services.
 func update(servicePath string, outputPath string) {
 	registry := &Registry{}
@@ -75,17 +63,26 @@ func update(servicePath string, outputPath string) {
 		return nil
 	})
 
+	if debug {
+		outToXml(*registry, outputPath)
+	}
+}
+
+func outToXml(registry Registry, outputPath string) {
 	if len(registry.Services) > 0 {
 		sort.Slice(registry.Services, func(i, j int) bool {
 			return registry.Services[i].Name < registry.Services[j].Name
 		})
 
-		f, _ := os.Create(outputPath)
+		f, err := os.Open(outputPath)
+		if err != nil {
+			log.Fatalf("failed to create output path for the registry.xml: %v", err)
+		}
 		xmlWriter := io.Writer(f)
 		enc := xml.NewEncoder(xmlWriter)
 		enc.Indent(" ", "  ")
 		if err := enc.Encode(registry); err != nil {
-			log.Fatal(err)
+			log.Fatalln(err)
 		}
 	}
 }

@@ -41,19 +41,20 @@ func main() {
 	flag.StringVar(&configPath, "config", "./config.yml", "path to config file")
 	flag.Parse()
 	cfg := readConf(configPath)
+	name := cfg.Oracle.Name
 
 	var runChan = make(chan os.Signal, 1)
 	signal.Notify(runChan, os.Interrupt, syscall.SIGTSTP)
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(
-		"%s:%d", cfg.Oracle.Hostname, cfg.Oracle.Port))
+	endpoint := fmt.Sprintf("%s:%d", cfg.Oracle.Hostname, cfg.Oracle.Port)
+	lis, err := net.Listen("tcp", endpoint)
 	if err != nil {
-		log.Fatalf("set up oracle server: %v", err)
+		log.Fatalf("set up %s: %v", name, err)
 	}
 	s := grpc.NewServer()
 	pb.RegisterOracleBackendServiceServer(s, &oracle.OracleBackendServer{})
 
-	log.Info("Oracle server is running...")
+	log.Infof("⇨ %s started on %s", name, endpoint)
 	go func() {
 		reflection.Register(s)
 		if err := s.Serve(lis); err != nil {
